@@ -1,0 +1,18 @@
+Run mesos master+slave on the single node
+
+1, Install runtime dependencies
+
+Note: Enable SDK addon firstly
+# zypper in subversion
+
+2, Start mesos master
+# cd /usr/local/mesos 
+# ./sbin/mesos-master --ip=147.2.212.158 --work_dir=/var/lib/mesos --log_dir=/var/log/mesos &> run-mesos-master.log
+
+Open browser and visit http://147.2.212.158:5050
+
+3, Start mesos slave
+# ./sbin/mesos-slave --master=147.2.212.158:5050 &> run-mesos-slave.log
+
+Check the slave info in master web UI.
+

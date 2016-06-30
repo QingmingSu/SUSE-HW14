@@ -1,0 +1,102 @@
+To run multi-nodes mesos master/slave with zookeeper
+
+Refer to: https://open.mesosphere.com/advanced-course
+
+1, Create local repo for zookeeper, maven, sbt, etc packages
+On a apache server:
+# zypper in createrepo
+# mkdir /srv/www/vhosts/<server-name>/repos/mesos-dep
+# cd /srv/www/vhosts/<server-name>/repos/mesos-dep
+# wget http://download.opensuse.org/repositories/Application:/Geo/SLE_12_SP1/noarch/maven-3.3.9-4.1.noarch.rpm
+# wget http://download.opensuse.org/repositories/devel:/languages:/scala/openSUSE_Tumbleweed/noarch/sbt-0.11.2-2.4.noarch.rpm
+# wget http://download.opensuse.org/repositories/home:/alchemy:/clustering/SLE_12_SP1/x86_64/zookeeper-3.4.6-1.1.x86_64.rpm
+# createrepo .
+
+On other hosts, add the repo:
+# zypper ar http://147.2.212.204/repos/mesos-dep/  mesos-dep
+# zypper ref
+
+2, Install zookeeper
+# zypper in zookeeper 
+
+Note that zookeeper requires Java:
+# zypper in java-1_8_0-openjdk
+
+3, Setup zookeeper
+# cp /etc/zookeeper/zoo_sample.cfg /etc/zookeeper/zoo.cfg
+
+Assume zookeeper cluster consists of 3 nodes, add following to zoo.cfg:
+server.1=server1_ip:2888:3888
+server.2=server2_ip:2888:3888
+server.3=server3_ip:2888:3888
+
+For server1:
+# echo 1 >  /var/lib/zookeeper/data/myid
+
+For server2:
+# echo 2 >  /var/lib/zookeeper/data/myid
+
+For server3:
+# echo 3 >  /var/lib/zookeeper/data/myid
+
+On each zookeeper node, start service:
+# zkServer.sh start
+
+4, Start mesos masters
+On each host to run mesos master service:
+export IP=x.x.x.x
+export PORT=5050    #defaut port is 5050
+export HOSTNAME=$IP #if hostname isn't FQDN
+export QUORUM=N     #quorum > (number of masters)/2
+export ZK=zk://server1_ip:2181,server2_ip:2181,server3_ip:2181/mesos
+
+nohup $MESOS_INSTALL_DIR/sbin/mesos-master \
+--cluster=mesos \
+--ip=$IP \
+--port=$PORT \
+--hostname=$HOSTNAME \
+--quorum=$QUORUM \
+--zk=$ZK \
+--registry_fetch_timeout=5mins \
+--registry_store_timeout=5mins \
+--work_dir=/var/lib/mesos \
+--log_dir=/var/log/mesos \
+&> run-mesos-master.log &
+
+Open browser to visit mesos master with http://host_ip:5050, where host_ip can be any of server1_ip, server2_ip or server3_ip.
+
+5, Start mesos slave
+On each host to run mesos slave service:
+
+nohup $MESOS_INSTALL_DIR/sbin/mesos-slave \
+--master=$ZK \
+--ip=$IP \
+--hostname=$HOSTNAME \
+--work_dir=/tmp/mesos \
+--log_dir=/var/log/mesos \
+&> run-mesos-slave.log &
+
+Check mesos master UI to make sure that all the mesos slave nodes are registered successfully.
+At this point, you can see available "Resources" (CPUs, Mem, Disk) of the cluster.
+
+6, Install and start Marathon
+On each host to run marathon service:
+
+Get the latest verson of marathon from website:
+https://mesosphere.github.io/marathon/ 
+
+$ wget http://downloads.mesosphere.com/marathon/v1.1.1/marathon-1.1.1.tgz
+# tar zxvf marathon-1.1.1.tgz -C /usr/local/
+
+# export MESOS_NATIVE_JAVA_LIBRARY=/usr/local/mesos/lib/libmesos.so
+# /usr/local/marathon-1.1.1/bin/start \
+--master zk://${ZK}/mesos \
+--zk zk://${ZK}/marathon
+
+You can see marathon itself achieves HA via zookeeper.
+
+Now, observer the marathon framework is registered to mesos cluster:
+http://server_ip:5050/#/frameworks
+
+You can also visit the marathon web UI directlry:
+http://server_ip:8080/

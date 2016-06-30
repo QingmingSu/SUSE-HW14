@@ -1,0 +1,42 @@
+* Setup private docker registry on a stand-alone host.
+* Install docker on all mesos-slave nodes and pull docker 
+  images from the private docker registry.
+
+1, Setup private docker registry
+On a stand-alon host:
+# zypper in docker-distribution-registry docker
+# systemctl start registry
+
+Note: By default, the repositories will be saved in /var/lib/docker-registry/
+
+Edit /etc/sysconfig/docker to enable the private registry:
+DOCKER_OPTS="--insecure-registry localhost:5000"
+
+# systemctl start docker
+
+Pull opensuse:leap image from hub.docker.com
+# docker pull opensuse:leap
+
+Tag the image and push it to local registry:
+# docker tag opensuse:leap localhost:5000/opensuse:leap
+# docker push localhost:5000/opensuse:leap
+
+2, Install and configure docker on mesos-slave nodes
+# zypper in docker
+
+Assume your private docker registry is named as registry.suse.qa
+
+Edit /etc/sysconfig/docker to enable the private registry:
+DOCKER_OPTS="--insecure-registry registry.suse.qa:5000"
+
+# systemctl start docker
+
+Pull docker image from local registry:
+# docker pull private-registry-host:5000/opensuse:leap
+
+Observe the existing docker images:
+# docker images
+
+Run docker container, like:
+docker run --rm registry.suse.qa:5000/opensuse:leap cat /etc/issue
+Welcome to openSUSE Leap 42.1 - Kernel \r (\l).

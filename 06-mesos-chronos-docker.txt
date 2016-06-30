@@ -1,0 +1,35 @@
+0, Assume zookeeper, mesos-master, mesos-slave, and chronos are already running.
+
+1, Append "--containerizers=docker,mesos" to mesos-slave start options and restart the service.
+
+2, Create a docker job with chronos REST API:
+
+Command line: 
+$ curl -L -H 'Content-Type: application/json' -X POST -d '{json hash}' ${chronos-node}:${port}/scheduler/iso8601
+
+Where json hash looks like:
+
+{
+  "schedule": "R5/2016-06-29T17:22:00Z/PT10M",
+  "name": "dockerjob1",
+  "epsilon": "PT15M",
+  "container": {
+    "type": "DOCKER",
+    "image": "opensuse:leap",
+    "forcePullImage": true,
+    "network": "BRIDGE",
+    "volumes": [
+      {
+        "containerPath": "/var/log/",
+        "hostPath": "/logs/",
+        "mode": "RW"
+      }
+    ]
+  },
+  "cpus": "1",
+  "mem": "128",
+  "uris": [],
+  "command": "while sleep 10; do date =u %T; done"
+}
+
+

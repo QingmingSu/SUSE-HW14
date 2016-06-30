@@ -1,0 +1,77 @@
+Assume zookeeper + mesos-master + mesos-slave have been deployed.
+Build and run chronos framework on mesos cluster.
+
+1, Install Nodejs which is required to build chronos
+$ wget http://download.opensuse.org/repositories/devel:/languages:/nodejs/SLE_12_SP1/x86_64/nodejs-6.2.1-105.1.x86_64.rpm
+$ sudo rpm -i nodejs
+
+Note: Jvm and Maven are also required to build chronos, assume they have been installed in previous steps.
+
+2, Build chronos from source
+$ wget https://github.com/mesos/chronos/archive/2.4.0.tar.gz -O chronos-24.0.tar.gz
+$ tar zxvf chronos-24.0.tar.gz
+$ cd chronos-2.4.0
+$ mvn package
+$ ls target/chronos-2.4.0.jar
+
+3, Start chronos
+${CHRONOS_INSTALL_DIR}/bin/start-chronos.bash \
+--master  zk://server1_ip:2181,server2_ip:2181,server3_ip:2181/mesos\
+--zk_hosts  server1_ip:2181,server2_ip:2181,server3_ip:2181 \
+--http_port 8086
+
+Note: use port 8086 for chronos, since 8080 is already used by marathon
+
+Deploy chronos on different nodes to enable the HA of chronos service.
+
+Open brower and visit http://server_ip:8086 
+
+4, Chronos REST API
+4.1 Get job list
+curl -L -X GET ${chronos_server}:${port}/scheduler/jobs
+
+For more human readable:
+curl -L -X GET ${chronos_server}:${port}/scheduler/jobs | sed -e 's/\([{}]\)/\n\1\n/g' -e 's/\(,\)/\1\n/g'
+
+4.2 Delete job
+curl -L -X DELETE ${chronos_server}:${port}/scheduler/job/<jobName>
+
+4.3 Delete All Tasks for a Job
+curl -L -X DELETE ${chronos_server}:${port}/scheduler/task/kill/<jobName>
+
+4.4 Create new job
+curl -L -H 'Content-Type: application/json' -X POST -d '{json hash}' ${chronos_server}:${port}/scheduler/iso8601
+
+For example:
+curl -L -H 'Content-Type: application/json' -X POST -d ' { "schedule": "R10/2016-06-29T01:45:00Z/PT10S", "name": "SAMPLE_JOB1_Date", "epsilon": "PT15M", "command": "date >> /tmp/JOB1_OUT.log", "owner": "qingming.su@suse.com", "async": false } ' ${chronos}/scheduler/iso8601
+
+##Notes for the schedule##
+The scheduling for the job, in ISO 8601 format. Consists of 3 parts separated by /:
+
+1) The number of times to repeat the job: Rn to repeat n times, or R to repeat forever
+
+2) The start time of the job. An empty start time means start immediately. Our format is ISO 8601:
+YYYY-MM-DDThh:mm:ss.sTZD (e.g., 1997-07-16T19:20:30.45+01:00) where: 
+* YYYY = four-digit year 
+* MM = two-digit month (01 = January, etc.) 
+* DD = two-digit day of month (01 through 31) 
+* hh = two-digit hour in 24-hour time (00 through 23) 
+* mm = two-digit minute (00 through 59) 
+* ss = two-digit second (00 through 59) 
+* s = one or more digits representing a decimal fraction of a second 
+* TZD = time zone designator (Z for UTC or +hh:mm or -hh:mm for UTC offset) 
+
+3) The run interval, defined following the "Duration" component of the ISO 8601 standard. 
+* P is required. 
+* T is for distinguishing M(inute) and M(onth)––it is required when specifying Hour/Minute/Second. 
+  For example: 
+    * P10M = 10 months 
+    * PT10M = 10 minutes 
+    * P1Y12M12D = 1 year, 12 months, and 12 days 
+    * P12DT12M = 12 days and 12 minutes 
+    * P1Y2M3DT4H5M6S = 1 year, 2 months, 3 days, 4 hours, and 5 minutes
+
+
+For mare info about chronos REST API, refer to:
+https://mesos.github.io/chronos/docs/api.html
+

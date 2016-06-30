@@ -1,0 +1,24 @@
+OS: SLES12-SP2 with SDK addon
+
+1, Prepare build environment
+
+$ sudo zypper in -t pattern SDK-C-C++
+
+$ sudo zypper in libcurl-devel libapr1-devel subversion-devel cyrus-sasl-devel cyrus-sasl-crammd5 java-1_8_0-openjdk-devel python-devel 
+
+Get maven and sbt from software.opensuse.org, for example:
+$ wget http://download.opensuse.org/repositories/Application:/Geo/SLE_12_SP1/noarch/maven-3.3.9-4.1.noarch.rpm
+$ sudo rpm -i maven-3.3.9-4.1.noarch.rpm
+
+Or create a local repo for maven adn sbt
+$ sudo zypper ar http://147.2.212.204/repos/mesos-dep/  mesos-dep
+$ sudo zypper in maven sbt
+
+2, Build meos from source
+$ wget http://archive.apache.org/dist/mesos/0.28.2/mesos-0.28.2.tar.gz
+$ tar zxvf mesos-0.28.2.tar.gz
+$ mkdir -p mesos-0.28.2/build
+$ cd mesos-0.28.2/build
+$ ../configure [--prefix=/usr/local/mesos]
+$ make
+$ make install
